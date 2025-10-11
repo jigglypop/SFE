@@ -34,7 +34,7 @@ H(z) = H_0 \sqrt{\Omega_m (1+z)^3 + \Omega_\Lambda}
 $$
 
 $$
-\alpha(z) = \alpha_0 \sqrt{\Omega_m (1+z)^3 + \Omega_\Lambda}
+\alpha(z) = \alpha_0 \sqrt{\Omega_m (1+z)^3 + \Omega_\Lambda}\quad\text{(관측 비교용 표현; 유도는 23장 절차 사용)}
 $$
 
 ### 1.2 수치 예측
@@ -107,7 +107,7 @@ $$
 연결:
 
 $$
-\epsilon = 2\Omega_\Lambda - 1 \implies \frac{\partial m}{\partial \epsilon} = -m_0
+\epsilon = 2\Omega_\Lambda - 1\quad\text{(검증용 관계)}\;\implies\; \frac{\partial m}{\partial \epsilon} = -m_0
 $$
 
 전자기:
@@ -233,7 +233,7 @@ $$
 $$
 
 $$
-\frac{d\alpha}{dz} = \alpha_0 \frac{d}{dz}\sqrt{\Omega_m(1+z)^3 + \Omega_\Lambda}
+\frac{d\alpha}{dz} = \alpha_0 \frac{d}{dz}\sqrt{\Omega_m(1+z)^3 + \Omega_\Lambda}\quad\text{(비교 전용)}
 $$
 
 $$
