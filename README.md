@@ -42,6 +42,7 @@
   - 억압장_제어_가능성_연구.md
 - 기타 스크립트
   - calculate_error_reduction.py, error_reduction_final.py, 끈_SFE_통일_수치검증.py
+  - SFE_fusion_calc.py, SFE_NIF_validation.py (핵융합·NIF 공학 응용용, 우주론 핵심 파라미터 역산/튜닝에는 사용하지 않음)
 
 3) 핵심 유도·검증 경로(무튜닝·무순환)
 - 입력(자연상수만): $G_N,\ c,\ \hbar,\ m_p,\ m_e,\ \alpha_{\rm EM}$
@@ -49,6 +50,7 @@
 - 23장: $\rho_\Phi=\alpha^2\bar\rho_m^{\,2}\lambda^2 C(X),\ \ \lambda=\dfrac{c}{H_{\rm eff}}$ 고정점으로 $\Omega_\Phi^{\rm theory}$ 산출
 - 비교: $\Omega_\Phi^{\rm theory}\approx 0.675\pm0.19\ \leftrightarrow\ \Omega_\Lambda^{\rm obs}\approx 0.692\pm0.012$ (무튜닝, 1σ)
 - 파생 예측(검증된 항목): $q_0=-0.53$ (3.6%), $f_0=0.47$ (정확), $H_{\rm local}\approx74.1$ km/s/Mpc (1σ)
+  - 이 경로는 SFE_verification_deductive.py 및 관련 노트북에서 **자연상수만을 입력**으로 사용하는 순수 연역 구조로 구현된다.
 
 4) 빠른 길잡이(읽기 순서)
 - 개요·핵심 아이디어: Part1 (01~03장)
@@ -61,6 +63,7 @@
 - 한글 서술, 수식은 $...$ 로 표기
 - 무튜닝·무순환: 관측치는 “검증 단계”에서만 사용(유도 단계 개입 금지)
 - 불필요한 파일 생성 금지, 기존 파일 보강 우선
+  - 특히 SFE_NIF_validation.py, SFE_fusion_calc.py 안의 $\epsilon\_{\rm loc}$ 역산 예제는 **공학적 시나리오 분석용 튜닝 예시**이며, 18장·23장에서 정의되는 우주론적 $\epsilon\_{\rm theory}$, $\alpha\_{\rm SI}$, $\lambda$의 유도에는 사용되지 않는다.
 
 6) 최근 변경 사항
 - 무한차원 관련 문서·링크는 제거되었습니다. 본 정리판은 현존 파일 기준으로 구성되며, 아래의 구버전 설명은 참고용으로 보존합니다.

@@ -1,0 +1,25 @@
+[project]
+name = "sfe"
+version = "0.1.0"
+description = "Suppression Field Theory - Quantum Computing Correction Library"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24.0",
+    "scipy>=1.10.0",
+    "matplotlib>=3.7.0",
+]
+
+[project.optional-dependencies]
+quantum = [
+    "qiskit>=1.0.0",
+    "qiskit-aer>=0.14.0",
+]
+dev = [
+    "pytest>=7.0.0",
+    "black>=23.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
