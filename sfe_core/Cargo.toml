@@ -1,0 +1,29 @@
+[package]
+name = "sfe_core"
+version = "1.1.0"
+edition = "2021"
+authors = ["SFE Research Lab"]
+description = "Standalone High-performance Commercial SFE Engine with Quantum Noise Simulation"
+
+[[bin]]
+name = "sfe_engine"
+path = "src/main.rs"
+
+[dependencies]
+ndarray = "0.15"
+rayon = "1.7"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+csv = "1.3"
+clap = { version = "4.4", features = ["derive"] }
+indicatif = "0.17"
+rand = "0.8"         # 1/f 노이즈 생성을 위한 난수 라이브러리 추가
+rand_distr = "0.4"   # 정규 분포 등 추가 기능
+rustfft = "6.1"      # 1/f 노이즈 생성을 위한 FFT 라이브러리 추가
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
