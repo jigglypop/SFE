@@ -1,6 +1,7 @@
 use rand::prelude::*;
 use rand_distr::StandardNormal;
 use rustfft::{FftPlanner, num_complex::Complex, Fft};
+use rustfft::num_traits::Zero;
 use std::sync::Arc;
 
 /// caching the FFT planner to avoid re-initialization overhead.

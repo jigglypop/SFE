@@ -55,13 +55,20 @@ enum Commands {
     Sweep {
         #[arg(short, long, default_value = "sweep_results.csv")]
         output: String,
+    },
+    /// [NEW] Quantum Error Correction Hybrid Simulation
+    Qec {
+        #[arg(short, long, default_value_t = 3)]
+        distance: usize,
+        #[arg(short, long, default_value_t = 0.10)]
+        noise: f64,
     }
 }
 
 fn main() {
     let args = Args::parse();
     println!("==========================================");
-    println!("   SFE Commercial Engine v1.3 (Library)   ");
+    println!("   SFE Commercial Engine v1.4 (Library)   ");
     println!("==========================================");
 
     let start_time = Instant::now();
@@ -96,6 +103,39 @@ fn main() {
         },
         Commands::Sweep { output } => {
             run_sweep_benchmark(output);
+        },
+        Commands::Qec { distance, noise } => {
+            println!("Running SFE+QEC Hybrid Simulation (d={}, noise={})", distance, noise);
+            // 1. Optimize Pulses (SFE)
+            println!("1. Optimizing Pulses (SFE Layer)...");
+            let (pulse_seq, udd_score, sfe_score) = run_pulse_optimizer(2000, 60, 20, noise);
+            println!("   SFE Score (Coherence): {:.4}", sfe_score);
+            
+            // 2. Run QEC Sim
+            println!("2. Simulating Repetition Code (QEC Layer)...");
+            // Simulate 100 cycles of QEC, measuring every 20 steps?
+            // If total steps = 2000, let's say measure every 50 steps.
+            let res = sfe_core::engine::qec::simulate_repetition_code(
+                distance, 
+                &pulse_seq, 
+                noise, 
+                2000, 
+                50, // Measure interval
+                2000 // Trials
+            );
+            
+            println!("---------------------------------------------");
+            println!("Physical Error Rate (per QEC cycle): {:.6}", res.physical_error_rate);
+            println!("Logical Error Rate  (per QEC cycle): {:.6}", res.logical_error_rate);
+            println!("Gain (Phy/Log): {:.2}", res.gain);
+            if res.logical_error_rate == 0.0 {
+                println!("SUCCESS: Perfect Logical Qubit Preservation! (0 errors)");
+            } else if res.gain > 1.0 {
+                println!("SUCCESS: SFE+QEC suppressed errors below threshold!");
+            } else {
+                println!("WARNING: Noise too high or distance too small.");
+            }
+            println!("---------------------------------------------");
         }
     }
 

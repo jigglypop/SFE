@@ -242,7 +242,7 @@ fn local_search_polish(seq: &[usize], steps: usize, noise_amp: f64, noise_pool: 
 }
 
 /// Optimized evaluator using pre-generated noise pool
-fn evaluate_sequence_with_pool(seq: &[usize], noise_pool: &[Vec<f64>], noise_amp: f64, trials: usize) -> f64 {
+pub fn evaluate_sequence_with_pool(seq: &[usize], noise_pool: &[Vec<f64>], noise_amp: f64, trials: usize) -> f64 {
     // If trials > pool size, we cycle; if < pool size, we pick random or first N.
     // For consistency, let's just use the first N (randomness is in the pool generation).
     // Or pick random indices. Picking random indices is better to avoid using same subset always if called repeatedly.

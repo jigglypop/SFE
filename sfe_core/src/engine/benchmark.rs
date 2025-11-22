@@ -19,10 +19,10 @@ pub fn run_decoupling_benchmark(steps: usize, trials: usize, output: String) {
 /// Iterates over Pulse Counts and Noise Amplitudes
 pub fn run_sweep_benchmark(output: String) {
     println!("Starting Comprehensive Sweep Benchmark...");
-    println!("Sweeping: Pulse Count [10..100], Noise Amp [0.05..0.25]");
+    println!("Sweeping: Pulse Count [10..160], Noise Amp [0.02..0.30]");
 
-    let pulse_counts = vec![10, 20, 30, 40, 50, 60, 80, 100];
-    let noise_levels = vec![0.05, 0.10, 0.15, 0.20, 0.25];
+    let pulse_counts = vec![10, 20, 30, 40, 50, 60, 80, 100, 120, 160];
+    let noise_levels = vec![0.02, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30];
     let steps = 2000;
     let generations = 10; // Reduced for sweep speed
     
