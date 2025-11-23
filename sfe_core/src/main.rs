@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
 use std::time::Instant;
-use sfe_core::{run_pulse_optimizer, run_sweep_benchmark, IbmClient};
+use sfe_core::{run_pulse_optimizer, run_sweep_benchmark, IbmClient, SfeController};
 use sfe_core::engine::core::QSFEngine; 
 use std::fs::File;
 use std::io::Write;
@@ -65,6 +65,15 @@ enum Commands {
     Surface {
         #[arg(short, long, default_value_t = 0.10)]
         noise: f64,
+    },
+    /// [NEW] SFE 상용 컨트롤러 (실시간 고속 진단/제어)
+    RunController {
+        #[arg(long)]
+        t1: f64,
+        #[arg(long)]
+        t2: f64,
+        #[arg(long, default_value_t = 0.001)]
+        gate_err: f64,
     },
     /// [NEW] IBM Quantum 하드웨어 연결
     RunIBM {
@@ -162,37 +171,81 @@ fn main() {
             println!("이득 (Gain):           {:.2}x", res.gain);
             println!("---------------------------------------------");
         },
-        Commands::RunIBM { api_key } => {
-            println!("모드: IBM Quantum 하드웨어 브리지");
-            println!("1. 최적의 펄스 시퀀스 생성 중 (Pure SFE)...");
-            let steps_total = 2000;
-            let (pulse_seq_idx, _, sfe_score) = run_pulse_optimizer(steps_total, 50, 0, 0.15);
-            println!("   생성 완료. 예상 SFE 점수: {:.4}", sfe_score);
-            println!("   펄스 수: {}", pulse_seq_idx.len());
-
-            let pulse_seq_norm: Vec<f64> = pulse_seq_idx.iter()
-                .map(|&idx| idx as f64 / steps_total as f64)
-                .collect();
+        Commands::RunController { t1, t2, gate_err } => {
+            println!("모드: SFE 상용 컨트롤러 (Real-time Core)");
+            let mut controller = SfeController::new();
             
-            println!("\n>>> Python 브리지용 시퀀스 복사 <<<");
-            print!("[");
-            for (i, val) in pulse_seq_norm.iter().enumerate() {
-                if i > 0 { print!(", "); }
-                print!("{:.4}", val);
-            }
-            println!("]");
-            println!(">>> 시퀀스 종료 <<<\n");
+            // 1. 진단 (nanosecond scale)
+            let t_diag = Instant::now();
+            let spec = controller.diagnose(t1, t2, gate_err);
+            let diag_time = t_diag.elapsed().as_nanos();
+            
+            println!("[Diagnosis] T1={}us T2={}us => TLS Amp={:.3} (Time: {} ns)", 
+                spec.t1, spec.t2, spec.tls_amp, diag_time);
 
-            println!("2. IBM Quantum API 연결 중...");
+            // 2. 전략 수립 (microsecond scale)
+            let t_strat = Instant::now();
+            let strategy = controller.select_strategy(&spec);
+            let strat_time = t_strat.elapsed().as_micros();
+            
+            println!("[Strategy] Selected Mode: {:?} (Time: {} us)", strategy.mode, strat_time);
+            println!("  - Expected Gain: {:.2}x", strategy.expected_gain);
+            println!("  - Rec. QEC Dist: d={}", strategy.qec_distance);
+            
+            if strategy.pulse_sequence.len() > 0 {
+                println!("  - Optimal Pulse Seq Generated ({} pulses)", strategy.pulse_sequence.len());
+                println!("RAW_SEQ_START");
+                println!("{:?}", strategy.pulse_sequence);
+                println!("RAW_SEQ_END");
+            }
+        },
+        Commands::RunIBM { api_key } => {
+            println!("모드: IBM Quantum 하드웨어 브리지 (SFE Rust-Native Controller)");
+            
+            let mut controller = SfeController::new();
+            
+            // 1. 진단 (Fez Typical Data or Fetch)
+            let t1 = 60.0;
+            let t2 = 40.0;
+            let gate_err = 1e-3;
+            
+            println!("1. 하드웨어 상태 진단 중... (T1={}us, T2={}us)", t1, t2);
+            let spec = controller.diagnose(t1, t2, gate_err);
+            println!("   -> 진단 결과: TLS Amp={:.3}, Drift={:.3}", spec.tls_amp, spec.drift_rate);
+
+            // 2. 전략 수립
+            println!("2. 최적 제어 전략 수립 중...");
+            let strategy = controller.select_strategy(&spec);
+            println!("   -> 선택된 전략: {:?} (Gain {:.2}x)", strategy.mode, strategy.expected_gain);
+            
+            if strategy.pulse_sequence.is_empty() {
+                println!("   [!] 전략이 ANC/Passive이므로 펄스 시퀀스 생성을 건너뜁니다.");
+                return;
+            }
+
+            // 3. IBM API 직접 제출
+            println!("3. IBM Quantum Runtime API 직접 연결 중...");
             let mut client = IbmClient::new(&api_key);
             
             match client.authenticate() {
                 Ok(_) => {
-                    match client.submit_sfe_job(&pulse_seq_norm) {
+                    println!("   인증 성공. SFE 펄스 작업 제출...");
+                    match client.submit_sfe_job(&strategy.pulse_sequence) {
                         Ok(job_id) => {
                             println!("성공: 작업 제출 완료!");
                             println!("Job ID: {}", job_id);
-                            println!("모니터링: https://quantum.ibm.com/jobs");
+                            println!("모니터링: https://quantum.ibm.com/jobs/{}", job_id);
+                            
+                            // 4. 결과 대기 및 수신
+                            println!("\n4. 작업 완료 대기 중...");
+                            match client.wait_for_result(&job_id) {
+                                Ok(result) => {
+                                    println!("   결과 수신 완료!");
+                                    // 5. 자동 분석
+                                    controller.analyze_result(&result);
+                                },
+                                Err(e) => println!("오류: 결과 수신 실패: {}", e),
+                            }
                         },
                         Err(e) => println!("오류: 작업 제출 실패: {}", e),
                     }

@@ -66,6 +66,34 @@ impl SfeOptimizer {
 
         best_norm
     }
+
+    /// 하드웨어 스펙을 반영한 Robust SFE 최적화
+    /// - TLS Notch Filter 자동 적용
+    /// - 초기 펄스 간격 제약 (0.03 이상) 강제
+    pub fn optimize_for_spec(&self, steps: usize, n_pulses: usize, noise_level: f64, noise_pool: &[Vec<f64>], tls_freq: Option<f64>) -> Vec<f64> {
+        // TLS 주파수가 감지되면 환경변수를 통해 Notch Filter 활성화
+        // (evaluate_sequence_with_pool 함수가 환경변수를 참조하므로)
+        if let Some(omega) = tls_freq {
+             std::env::set_var("SFE_TLS_OMEGA", omega.to_string());
+             std::env::set_var("SFE_TLS_WEIGHT", "0.5"); // Strong penalty weight
+        } else {
+             std::env::remove_var("SFE_TLS_OMEGA");
+             std::env::remove_var("SFE_TLS_WEIGHT");
+        }
+        
+        let mut seq = self.optimize(steps, n_pulses, noise_level, noise_pool);
+        
+        // Robustness: 초기 펄스가 너무 빠르면 하드웨어 오류 발생 가능
+        // 최소 0.03 (3%) 지점 이후에 오도록 강제 보정
+        let min_first_pulse = 0.03; 
+        if !seq.is_empty() && seq[0] < min_first_pulse {
+             seq[0] = min_first_pulse;
+             // 순서가 섞였을 수 있으므로 재정렬
+             seq.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        }
+        
+        seq
+    }
 }
 
 /// 최적화 메인 진입점 (퍼사드 패턴)
@@ -137,7 +165,7 @@ fn evaluate_performance(
 /// - r = {0.4,0.6,0.8,1.0} 지점에서 S_k = cos φ(t_k) 측정
 /// - 가중 평균 S_eff = Σ w_k S_k / Σ w_k
 /// - 모든 궤적에 대해 평균한 뒤, 저주파 모멘트 패널티(m0,m1,m2)를 반영하여 최종 점수 반환
-fn evaluate_sequence_with_pool(
+pub fn evaluate_sequence_with_pool(
     pulses: &[usize],
     noise_amp: f64,
     noise_pool: &[Vec<f64>],
@@ -157,7 +185,6 @@ fn evaluate_sequence_with_pool(
 
     let dt: f64 = 1.0;
 
-    // 토글 함수 y(t) = ±1 (모든 궤적에서 동일하게 사용)
     let mut y = vec![1.0_f64; steps];
     let mut current_sign = 1.0_f64;
     let mut pulse_idx = 0_usize;
@@ -208,6 +235,32 @@ fn evaluate_sequence_with_pool(
         moment_penalty = acc / (moment_order as f64);
     }
 
+    let tls_omega: f64 = std::env::var("SFE_TLS_OMEGA")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0.0);
+    let tls_weight: f64 = std::env::var("SFE_TLS_WEIGHT")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0.0);
+
+    let mut tls_penalty = 0.0_f64;
+    if tls_omega > 0.0 && tls_weight > 0.0 {
+        let mut re = 0.0_f64;
+        let mut im = 0.0_f64;
+        for t in 0..steps {
+            let phase = tls_omega * (t as f64);
+            let c = phase.cos();
+            let s = phase.sin();
+            let v = y[t];
+            re += v * c;
+            im += v * s;
+        }
+        let norm = steps as f64;
+        let y2 = (re * re + im * im) / (norm * norm);
+        tls_penalty = tls_weight * y2;
+    }
+
     let scores: Vec<f64> = noise_pool
         .par_iter()
         .map(|noise| {
@@ -240,24 +293,10 @@ fn evaluate_sequence_with_pool(
     let sum: f64 = scores.iter().sum();
     let avg_s = sum / scores.len() as f64;
 
-    // 최종 점수: 장기 가중 결맞음 - 저주파 모멘트 패널티
-    avg_s - moment_penalty
+    avg_s - moment_penalty - tls_penalty
 }
 
-// ================================================================================
-// 레거시: 유전 알고리즘 최적화기 (사용 중단됨)
-// 참조 및 롤백용으로 보존.
-// ================================================================================
-/*
-pub struct GeneticOptimizer {
-    population_size: usize,
-    mutation_rate: f64,
-    elite_size: usize,
-    steps: usize,
-    n_pulses: usize,
+// 목적함수 인터페이스 추가 (SfeObjective)
+pub trait SfeObjective {
+    fn evaluate(&self, seq: &[f64]) -> f64;
 }
-
-impl GeneticOptimizer {
-    // ... (원본 구현 코드는 여기에 위치) ...
-}
-*/

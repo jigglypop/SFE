@@ -5,14 +5,14 @@ from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 from ibm_env import load_ibm_api_key
 
 SFE_SEQ_OPT_8 = [
-    0.0300,
+    0.0125,
     0.1170,
     0.2500,
-    0.4030,
+    0.4130,
     0.5870,
-    0.7500,
+    0.7300,
     0.8830,
-    0.9700,
+    0.9900,
 ]
 
 DURATIONS_DT = [0, 2222, 4444, 6666, 8888, 11111, 13333, 15555, 17777, 20000]
