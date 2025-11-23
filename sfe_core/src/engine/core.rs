@@ -8,7 +8,7 @@ pub struct QSFEngine {
     pub phi: Array1<f64>,
     pub dphi: Array1<f64>,
     pub source_j: Array1<f64>,
-    pub forces_buffer: Array1<f64>, // Cached buffer to avoid allocation
+    pub forces_buffer: Array1<f64>, // 할당 방지를 위한 캐시된 버퍼
     pub mu: f64,
     pub lam: f64,
 }
@@ -23,7 +23,7 @@ impl QSFEngine {
         let mut source_j = Array1::zeros(size);
         let forces_buffer = Array1::zeros(size);
         
-        // Create a localized source matter
+        // 국소화된 소스 물질 생성
         let mid = size / 2;
         if size > 20 {
             let range = 10;
@@ -36,17 +36,17 @@ impl QSFEngine {
     #[inline(always)]
     fn potential_force(phi_val: f64, mu: f64, lam: f64) -> f64 {
         // - dV/dphi = -(-mu^2 phi + lambda phi^3) = mu^2 phi - lambda phi^3
-        // Optimized: phi * (mu^2 - lambda * phi^2)
+        // 최적화됨: phi * (mu^2 - lambda * phi^2)
         phi_val * (mu.powi(2) - lam * phi_val.powi(2))
     }
 
     pub fn step(&mut self) {
         let n = self.phi.len();
         
-        // We need read-only access to phi for the stencil
-        // and write access to forces_buffer.
-        // Unsafe is not needed if we slice or iterate correctly, but standard iterators don't give neighbors easily.
-        // We'll use a raw slice for the parallel iterator which is safe in Rust.
+        // 스텐실 계산을 위해 phi에 대한 읽기 접근 권한과
+        // forces_buffer에 대한 쓰기 접근 권한이 필요합니다.
+        // Unsafe는 슬라이스나 반복자를 올바르게 사용하면 필요하지 않지만, 표준 반복자로는 이웃 요소에 쉽게 접근하기 어렵습니다.
+        // Rust에서 안전한 원시 슬라이스(raw slice)와 병렬 반복자를 사용하겠습니다.
         
         let phi_slice = self.phi.as_slice().unwrap();
         let dphi_slice = self.dphi.as_slice().unwrap();
@@ -55,11 +55,11 @@ impl QSFEngine {
         let mu = self.mu;
         let lam = self.lam;
 
-        // Parallel computation of forces
+        // 힘의 병렬 계산
         forces_slice.par_iter_mut().enumerate().for_each(|(i, force)| {
-            // Boundary conditions (Periodic or Dirichlet? Code used 0-index for left of 0, likely clamped or periodic logic intended)
-            // Original code: if i==0 { phi[0] } else { phi[i-1] } -> Effectively Neumann/Dirichlet hybrid?
-            // Let's stick to the original logic: Clamped at ends.
+            // 경계 조건 (주기적 또는 디리클레? 코드는 0 왼쪽 인덱스 사용, 클램핑 또는 주기적 로직 의도됨)
+            // 원본 코드: if i==0 { phi[0] } else { phi[i-1] } -> 사실상 노이만/디리클레 하이브리드?
+            // 원래 로직 유지: 양끝 클램핑.
             let left = if i == 0 { phi_slice[0] } else { phi_slice[i-1] };
             let right = if i == n-1 { phi_slice[n-1] } else { phi_slice[i+1] };
             
@@ -70,11 +70,11 @@ impl QSFEngine {
             *force = pot_f + COUPLING_K * laplacian + source_slice[i] + damping;
         });
 
-        // Update state (Symplectic Eulerish)
+        // 상태 업데이트 (심플렉틱 오일러와 유사)
         // dphi += forces * DT
         // phi += dphi * DT
-        // We can parallelize this too, or rely on ndarray's vectorized ops (which are efficient but maybe single-threaded by default unless blas is used).
-        // Let's use parallel iterator for consistency and cache locality.
+        // 이것도 병렬화할 수 있으며, ndarray의 벡터화 연산을 사용할 수도 있습니다.
+        // 일관성과 캐시 지역성을 위해 병렬 반복자를 사용하겠습니다.
         
         let dphi_slice = self.dphi.as_slice_mut().unwrap();
         let phi_slice = self.phi.as_slice_mut().unwrap();

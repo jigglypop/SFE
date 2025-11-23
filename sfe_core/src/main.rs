@@ -15,7 +15,7 @@ struct Args {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-    /// Field Dynamics Simulation
+    /// SFE 억압장 동역학 시뮬레이션
     Dynamics {
         #[arg(short, long, default_value_t = 100_000)]
         size: usize,
@@ -24,7 +24,7 @@ enum Commands {
         #[arg(short, long, default_value = "sfe_output.csv")]
         output: String,
     },
-    /// Quantum Noise Simulation
+    /// [Deprecated] 양자 노이즈 시뮬레이션 (Sweep 사용 권장)
     QuantumNoise {
         #[arg(short, long, default_value_t = 10_000)]
         steps: usize,
@@ -33,7 +33,7 @@ enum Commands {
         #[arg(short, long, default_value = "quantum_noise.csv")]
         output: String,
     },
-    /// Decoupling Benchmark (Single Point)
+    /// [Deprecated] 디커플링 벤치마크 (Sweep 사용 권장)
     DecouplingBenchmark {
         #[arg(short, long, default_value_t = 10_000)]
         steps: usize,
@@ -42,28 +42,31 @@ enum Commands {
         #[arg(short, long, default_value = "decoupling_result.csv")]
         output: String,
     },
-    /// SFE-Genetic Pulse Optimizer
+    /// SFE 펄스 최적화기 (Pure Analytic Formula)
     PulseOptimizer {
         #[arg(short, long, default_value_t = 2000)]
         steps: usize,
         #[arg(short, long, default_value_t = 50)]
         pulses: usize,
         #[arg(short, long, default_value_t = 50)]
-        generations: usize,
+        generations: usize, // 이제 무시됩니다 (순수 공식 사용)
     },
-    /// [NEW] Comprehensive Parameter Sweep (Heatmap Data)
+    /// [NEW] 포괄적 파라미터 스윕 (히트맵 데이터 생성)
     Sweep {
         #[arg(short, long, default_value = "sweep_results.csv")]
         output: String,
     },
-    /// [NEW] Quantum Error Correction Hybrid Simulation
     Qec {
         #[arg(short, long, default_value_t = 3)]
         distance: usize,
         #[arg(short, long, default_value_t = 0.10)]
         noise: f64,
     },
-    /// [NEW] Connect to IBM Quantum Hardware
+    Surface {
+        #[arg(short, long, default_value_t = 0.10)]
+        noise: f64,
+    },
+    /// [NEW] IBM Quantum 하드웨어 연결
     RunIBM {
         #[arg(short, long)]
         api_key: String,
@@ -73,14 +76,14 @@ enum Commands {
 fn main() {
     let args = Args::parse();
     println!("==========================================");
-    println!("   SFE Commercial Engine v1.5 (Cloud)     ");
+    println!("   SFE 상용 엔진 v1.6 (Pure Formula)      ");
     println!("==========================================");
 
     let start_time = Instant::now();
 
     match args.command {
         Commands::Dynamics { size, steps, output } => {
-             println!("Mode: Field Dynamics Simulation");
+             println!("모드: SFE 억압장 동역학 시뮬레이션");
              let mut engine = QSFEngine::new(size);
              let pb = ProgressBar::new(steps as u64);
              pb.set_style(ProgressStyle::default_bar().template("{spinner:.green} {bar:40} {pos}/{len}").unwrap());
@@ -96,21 +99,22 @@ fn main() {
              for (t, v) in history { writeln!(file, "{},{}", t, v).unwrap(); }
         },
         Commands::QuantumNoise { .. } => {
-            println!("(Deprecated) Use Sweep for comprehensive analysis.");
+            println!("(사용 중단됨) 포괄적인 분석을 위해 Sweep 명령을 사용하세요.");
         },
         Commands::DecouplingBenchmark { .. } => {
-            println!("(Deprecated) Use Sweep for comprehensive analysis.");
+            println!("(사용 중단됨) 포괄적인 분석을 위해 Sweep 명령을 사용하세요.");
         },
         Commands::PulseOptimizer { steps, pulses, generations } => {
+            println!("모드: SFE 펄스 최적화 (순수 공식 사용)");
+            // run_pulse_optimizer는 이제 내부적으로 Analytic Formula를 사용합니다.
             let (pulse_seq_idx, udd, sfe) = run_pulse_optimizer(steps, pulses, generations, 0.15);
-            println!("Final Result -> UDD: {:.4}, SFE: {:.4}", udd, sfe);
+            println!("최종 점수 -> UDD: {:.4}, SFE: {:.4}", udd, sfe);
 
-            // Print normalized sequence for external bridges (e.g. Python/IBM scripts)
             let pulse_seq_norm: Vec<f64> = pulse_seq_idx
                 .iter()
                 .map(|&idx| idx as f64 / steps as f64)
                 .collect();
-            println!("\n>>> SFE NORMALIZED SEQUENCE (for verification_long.py) <<<");
+            println!("\n>>> SFE 정규화된 시퀀스 (검증용) <<<");
             print!("[");
             for (i, val) in pulse_seq_norm.iter().enumerate() {
                 if i > 0 {
@@ -119,70 +123,84 @@ fn main() {
                 print!("{:.4}", val);
             }
             println!("]");
-            println!(">>> END SEQUENCE <<<\n");
+            println!(">>> 시퀀스 종료 <<<\n");
         },
         Commands::Sweep { output } => {
             run_sweep_benchmark(output);
         },
         Commands::Qec { distance, noise } => {
-            println!("Running SFE+QEC Hybrid Simulation (d={}, noise={})", distance, noise);
-            println!("1. Optimizing Pulses (SFE Layer)...");
-            let (pulse_seq, _, sfe_score) = run_pulse_optimizer(2000, 60, 20, noise);
-            println!("   SFE Score (Coherence): {:.4}", sfe_score);
+            println!("SFE+QEC 하이브리드 시뮬레이션 실행 (거리={}, 노이즈={})", distance, noise);
+            println!("1. SFE 펄스 적용 (Pure Analytic Formula)...");
+            // Pure SFE 공식은 매우 빠르므로 즉시 결과가 나옵니다.
+            // 노이즈가 강한 상황을 가정하여 최적화 수행
+            let (pulse_seq, _, sfe_score) = run_pulse_optimizer(2000, 60, 0, noise);
+            println!("   SFE 결맞음 점수: {:.4}", sfe_score);
             
-            println!("2. Simulating Repetition Code (QEC Layer)...");
+            println!("2. 반복 코드(Repetition Code) 시뮬레이션 (QEC 계층)...");
             let res = sfe_core::engine::qec::simulate_repetition_code(
                 distance, &pulse_seq, noise, 2000, 50, 2000
             );
             
             println!("---------------------------------------------");
-            println!("Physical Error Rate: {:.6}", res.physical_error_rate);
-            println!("Logical Error Rate:  {:.6}", res.logical_error_rate);
-            println!("Gain (Phy/Log): {:.2}", res.gain);
+            println!("물리적 오류율 (p_phy): {:.6}", res.physical_error_rate);
+            println!("논리적 오류율 (P_L):   {:.6}", res.logical_error_rate);
+            println!("이득 (Gain):           {:.2}x", res.gain);
+            println!("---------------------------------------------");
+        },
+        Commands::Surface { noise } => {
+            println!("SFE+Surface Code 시뮬레이션 실행 (거리=3, 노이즈={})", noise);
+            println!("1. SFE 펄스 적용 (Pure Analytic Formula)...");
+            let (pulse_seq, _, sfe_score) = run_pulse_optimizer(2000, 60, 0, noise);
+            println!("   SFE 결맞음 점수: {:.4}", sfe_score);
+            println!("2. Surface Code(d=3) 시뮬레이션 (QEC 계층)...");
+            let res = sfe_core::engine::qec::simulate_surface_code_d3(
+                &pulse_seq, noise, 2000, 50, 2000,
+            );
+            println!("---------------------------------------------");
+            println!("물리적 오류율 (p_phy): {:.6}", res.physical_error_rate);
+            println!("논리적 오류율 (P_L):   {:.6}", res.logical_error_rate);
+            println!("이득 (Gain):           {:.2}x", res.gain);
             println!("---------------------------------------------");
         },
         Commands::RunIBM { api_key } => {
-            println!("Mode: IBM Quantum Hardware Bridge");
-            println!("1. Running SFE Optimizer to find best pulse sequence...");
-            // Run optimizer locally first to get the "Recipe"
+            println!("모드: IBM Quantum 하드웨어 브리지");
+            println!("1. 최적의 펄스 시퀀스 생성 중 (Pure SFE)...");
             let steps_total = 2000;
-            let (pulse_seq_idx, _, sfe_score) = run_pulse_optimizer(steps_total, 50, 20, 0.15);
-            println!("   Optimization Complete. SFE Score: {:.4}", sfe_score);
-            println!("   Pulse Count: {}", pulse_seq_idx.len());
+            let (pulse_seq_idx, _, sfe_score) = run_pulse_optimizer(steps_total, 50, 0, 0.15);
+            println!("   생성 완료. 예상 SFE 점수: {:.4}", sfe_score);
+            println!("   펄스 수: {}", pulse_seq_idx.len());
 
-            // Convert indices (steps) to normalized time (0.0 - 1.0)
             let pulse_seq_norm: Vec<f64> = pulse_seq_idx.iter()
                 .map(|&idx| idx as f64 / steps_total as f64)
                 .collect();
             
-            // [NEW] Print Sequence for Python Bridge
-            println!("\n>>> COPY THIS SEQUENCE FOR PYTHON BRIDGE <<<");
+            println!("\n>>> Python 브리지용 시퀀스 복사 <<<");
             print!("[");
             for (i, val) in pulse_seq_norm.iter().enumerate() {
                 if i > 0 { print!(", "); }
                 print!("{:.4}", val);
             }
             println!("]");
-            println!(">>> END SEQUENCE <<<\n");
+            println!(">>> 시퀀스 종료 <<<\n");
 
-            println!("2. Connecting to IBM Quantum API...");
+            println!("2. IBM Quantum API 연결 중...");
             let mut client = IbmClient::new(&api_key);
             
             match client.authenticate() {
                 Ok(_) => {
                     match client.submit_sfe_job(&pulse_seq_norm) {
                         Ok(job_id) => {
-                            println!("SUCCESS: Job submitted successfully!");
+                            println!("성공: 작업 제출 완료!");
                             println!("Job ID: {}", job_id);
-                            println!("Monitor at: https://quantum.ibm.com/jobs");
+                            println!("모니터링: https://quantum.ibm.com/jobs");
                         },
-                        Err(e) => println!("ERROR: Failed to submit job: {}", e),
+                        Err(e) => println!("오류: 작업 제출 실패: {}", e),
                     }
                 },
-                Err(e) => println!("ERROR: Authentication failed: {}", e),
+                Err(e) => println!("오류: 인증 실패: {}", e),
             }
         }
     }
 
-    println!("Total Time: {:.2}s", start_time.elapsed().as_secs_f64());
+    println!("총 소요 시간: {:.2}s", start_time.elapsed().as_secs_f64());
 }
