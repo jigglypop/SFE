@@ -1,10 +1,10 @@
 from qiskit_ibm_runtime import QiskitRuntimeService
 from ibm_env import load_ibm_api_key
 
-JOB_ID = "d4hekmolslhc73d1j6f0"
-SHOTS = 2048
+JOB_ID = "d4hith0lslhc73d1n5n0"
+SHOTS = 1024
 
-print(f"=== Fetching Data for Job {JOB_ID} (CPMG_8 vs SFE_OPT_8, multi-duration) ===", flush=True)
+print(f"=== Fetching Data for Job {JOB_ID} (CPMG_8 vs SFE_OPT_8, 10-duration sweep) ===", flush=True)
 
 api_key = load_ibm_api_key()
 service = QiskitRuntimeService(channel="ibm_quantum_platform", token=api_key)
@@ -18,14 +18,11 @@ try:
         print("Downloading results...", flush=True)
         result = job.result()
 
-        labels = [
-            "CPMG_8_T4444",
-            "SFE_OPT_8_T4444",
-            "CPMG_8_T8888",
-            "SFE_OPT_8_T8888",
-            "CPMG_8_T13333",
-            "SFE_OPT_8_T13333",
-        ]
+        durations = [0, 2222, 4444, 6666, 8888, 11111, 13333, 15555, 17777, 20000]
+        labels = []
+        for d in durations:
+            labels.append(f"CPMG_8_T{d}")
+            labels.append(f"SFE_OPT_8_T{d}")
         print("\n--- Survival Probabilities P(|0>) ---", flush=True)
 
         stats = []

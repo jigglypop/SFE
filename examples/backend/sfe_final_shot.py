@@ -15,7 +15,7 @@ SFE_SEQ_OPT_8 = [
     0.9700,
 ]
 
-DURATIONS_DT = [4444, 8888, 13333]
+DURATIONS_DT = [0, 2222, 4444, 6666, 8888, 11111, 13333, 15555, 17777, 20000]
 
 
 def build_cpmg_circuit(duration_dt: int) -> QuantumCircuit:

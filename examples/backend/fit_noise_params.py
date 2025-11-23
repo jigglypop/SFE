@@ -107,14 +107,18 @@ def fit_combined_full(x_data, alpha, A, gamma_white):
 
 def main():
     print("=== SFE Noise Parameter Fitter (with White Noise) ===")
-    print("Estimating (alpha, A, gamma_white) from IBM Fez data...")
+    print("Estimating (alpha, A, gamma_white) from IBM Fez 10-duration sweep...")
     
     dt_ns = 4.5
-    durations_dt = np.array([0, 4444, 8888])
-    T_us = durations_dt * dt_ns * 1e-3 
+    durations_dt = np.array([0, 2222, 4444, 6666, 8888, 11111, 13333, 15555, 17777, 20000])
+    T_us = durations_dt * dt_ns * 1e-3
     
-    S_exp_cpmg = np.array([1.0, 0.3936, 0.15]) 
-    S_exp_sfe = np.array([1.0, 0.5518, 0.28])
+    # Real experimental data (Job d4hith0lslhc73d1n5n0)
+    P0_exp_cpmg = np.array([0.9951, 0.8896, 0.7646, 0.7725, 0.6240, 0.6641, 0.6504, 0.6240, 0.6172, 0.5664])
+    P0_exp_sfe = np.array([1.0000, 0.7959, 0.8047, 0.7441, 0.6709, 0.6602, 0.6250, 0.5928, 0.5898, 0.5488])
+    
+    S_exp_cpmg = 2 * P0_exp_cpmg - 1
+    S_exp_sfe = 2 * P0_exp_sfe - 1
     
     x_combined = np.concatenate([T_us, T_us])
     y_combined = np.concatenate([S_exp_cpmg, S_exp_sfe])
