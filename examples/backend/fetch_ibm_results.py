@@ -1,8 +1,8 @@
 from qiskit_ibm_runtime import QiskitRuntimeService
 from ibm_env import load_ibm_api_key
 
-JOB_ID = "d4hfvsh2bisc73a4enh0"
-SHOTS = 1024
+JOB_ID = "d4hekmolslhc73d1j6f0"
+SHOTS = 2048
 
 print(f"=== Fetching Data for Job {JOB_ID} (CPMG_8 vs SFE_OPT_8, multi-duration) ===", flush=True)
 
@@ -28,6 +28,7 @@ try:
         ]
         print("\n--- Survival Probabilities P(|0>) ---", flush=True)
 
+        stats = []
         for i, pub_result in enumerate(result):
             label = labels[i] if i < len(labels) else f"Circuit_{i}"
             meas_data = pub_result.data.c
@@ -35,6 +36,32 @@ try:
             p0 = counts.get("0", 0) / SHOTS
             p1 = counts.get("1", 0) / SHOTS
             print(f"{label:14s} | P(0) = {p0:.4f}, P(1) = {p1:.4f}", flush=True)
+            stats.append((label, p0, p1))
+
+        pairs = {}
+        for label, p0, p1 in stats:
+            parts = label.split("_")
+            dur = ""
+            if len(parts) >= 3 and parts[-1].startswith("T"):
+                dur = parts[-1][1:]
+            kind = "CPMG" if "CPMG" in label else "SFE"
+            k = dur if dur else "NA"
+            if k not in pairs:
+                pairs[k] = {}
+            pairs[k][kind] = (p0, p1)
+
+        d_list = [3, 5, 7]
+        for dur, entry in pairs.items():
+            if "CPMG" in entry and "SFE" in entry:
+                p1_cpmg = entry["CPMG"][1]
+                p1_sfe = entry["SFE"][1]
+                if p1_sfe <= 0.0:
+                    continue
+                r = p1_cpmg / p1_sfe
+                print(f"\n[duration {dur}] p_phy_CPMG={p1_cpmg:.4f}, p_phy_SFE={p1_sfe:.4f}, r={r:.3f}", flush=True)
+                for d in d_list:
+                    gain = r ** ((d + 1) / 2.0)
+                    print(f"  d={d}: P_L(CPMG)/P_L(SFE) ≈ {gain:.2f}", flush=True)
 
     elif status in ["QUEUED", "RUNNING", "JobStatus.QUEUED", "JobStatus.RUNNING"]:
         print("Job is still running. Please wait a moment and try again.", flush=True)
