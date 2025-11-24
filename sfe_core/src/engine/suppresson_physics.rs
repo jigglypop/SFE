@@ -542,6 +542,73 @@ pub fn run_multimode_yukawa_scan() {
     }
 }
 
+pub fn run_continuous_ratio_bounds() {
+    println!("\n=== 연속 스펙트럼 레이리 경계 스캔 ===\n");
+
+    let coupling = MassProportionalCoupling::from_g_mu(6e-4_f64);
+    let g_ratio = coupling.g_p / coupling.g_mu;
+
+    let delta_r2_exp = 0.04_f64 * 0.04_f64;
+    let delta_a_exp = 2.51e-9_f64;
+    let r_exp = delta_r2_exp / delta_a_exp;
+
+    println!("뮤온 g-2에서 유도된 질량-비례 결합 사용: g_p/g_μ = {:.3}", g_ratio);
+    println!(
+        "실험 비율 R_exp = Δr_p^2(μ)/Δa_μ ≈ {:.3e} (단위: fm^2)",
+        r_exp
+    );
+
+    let masses_min_mev = 1.0_f64;
+    let masses_max_mev = 1000.0_f64;
+    let samples = 400usize;
+
+    let log_min = masses_min_mev.ln();
+    let log_max = masses_max_mev.ln();
+
+    let mut r_min = f64::INFINITY;
+    let mut r_max = 0.0_f64;
+
+    let mut idx = 0usize;
+    while idx < samples {
+        let t = (idx as f64 + 0.5_f64) / (samples as f64);
+        let log_m = log_min + t * (log_max - log_min);
+        let m = log_m.exp();
+
+        let f_mu = MultiModeYukawa::coeff_r2(M_MU_MEV, m);
+        let g_val = MultiModeYukawa::coeff_g2(m);
+
+        if g_val <= 0.0_f64 {
+            idx += 1;
+            continue;
+        }
+
+        let r_m = g_ratio * f_mu / g_val;
+        if r_m.is_finite() {
+            if r_m < r_min {
+                r_min = r_m;
+            }
+            if r_m > r_max {
+                r_max = r_m;
+            }
+        }
+
+        idx += 1;
+    }
+
+    println!("\n단일 모드 비율 R(m) = (g_p/g_μ)·F_μ(m)/G(m) 의 스캔 범위 (m ∈ [1, 1000] MeV):");
+    println!("  R_min ≈ {:.3e}", r_min);
+    println!("  R_max ≈ {:.3e}", r_max);
+
+    if r_exp >= r_min && r_exp <= r_max {
+        println!("\n결론: R_exp 가 [R_min, R_max] 내부에 있음");
+        println!("  → 양의 연속 스펙트럼 ρ(s)만으로도 Δr_p^2(μ), Δa_μ 비율을 맞출 여지가 있음 (커널 비율 관점).");
+    } else {
+        println!("\n결론: R_exp 가 [R_min, R_max] 바깥에 있음");
+        println!("  → 양수 스펙트럼 ρ(s)만으로 두 관측값을 동시에 만족시키기 어렵고,");
+        println!("     비선택 모드(보정 모드)나 플레버 구조 확장이 필요함을 시사.");
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -85,6 +85,8 @@ enum Commands {
     SuppressonScan,
     /// [NEW] 3-모드 억압보손 Yukawa 스캔
     MultiModeScan,
+    /// [NEW] 연속 스펙트럼 레이리 경계 스캔
+    ContinuousBounds,
 }
 
 fn configure_fez_suppresson(noise: f64, steps: usize) {
@@ -340,6 +342,10 @@ fn main() {
         Commands::MultiModeScan => {
             println!("모드: 3-모드 억압보손 Yukawa 스캔");
             sfe_core::engine::suppresson_physics::run_multimode_yukawa_scan();
+        }
+        Commands::ContinuousBounds => {
+            println!("모드: 연속 스펙트럼 레이리 경계 스캔");
+            sfe_core::engine::suppresson_physics::run_continuous_ratio_bounds();
         }
     }
 
