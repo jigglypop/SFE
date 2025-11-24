@@ -422,6 +422,22 @@ pub fn run_muon_specificity_analysis() {
     println!("    Δa_μ = {:.2e} (예상: 2.51e-9)", delta_a_mu);
     println!("    Δa_e = {:.2e}", delta_a_e);
     println!("    비율: {:.2e}", delta_a_mu / delta_a_e);
+
+    let delta_a_target = 2.51e-9_f64;
+    let ratio_over = delta_a_mu / delta_a_target;
+    let delta_a_unsel = delta_a_target - delta_a_mu;
+    let frac_unsel = delta_a_unsel / delta_a_mu;
+
+    println!("\n  최소모델(선택 모드) vs 실험값 분해:");
+    println!("    Δa_μ(sel) = {:.2e}", delta_a_mu);
+    println!("    Δa_μ(exp) = {:.2e}", delta_a_target);
+    println!("    Δa_μ(sel)/Δa_μ(exp) = {:.1}", ratio_over);
+    println!("    Δa_μ(unsel) = {:.2e}", delta_a_unsel);
+    println!(
+        "    Δa_μ(unsel)/Δa_μ(sel) = {:.3} (선택 모드의 약 {:.1}% 상쇄)",
+        frac_unsel,
+        frac_unsel * -100.0_f64
+    );
     
     let g2_ok = anomaly.verify_muon_anomaly();
     println!("\n  뮤온 g-2 변칙 설명: {}", if g2_ok { "✓ 가능" } else { "✗ 불가능" });
@@ -436,6 +452,20 @@ pub fn run_muon_specificity_analysis() {
     
     println!("\n  예측된 양성자 반경 차이:");
     println!("    r_p(e) - r_p(μ) = {:.3} fm (측정: 0.04 fm)", dr_pred);
+
+    let dr_exp = 0.04_f64;
+    let dr_unsel = dr_exp - dr_pred;
+    let frac_unsel_r = dr_unsel / dr_pred;
+
+    println!("\n  최소모델(선택 모드) vs 실험값 분해:");
+    println!("    Δr_p(sel) = {:.3} fm", dr_pred);
+    println!("    Δr_p(exp) = {:.3} fm", dr_exp);
+    println!("    Δr_p(unsel) = {:.3} fm", dr_unsel);
+    println!(
+        "    Δr_p(unsel)/Δr_p(sel) = {:.3} (비선택 모드가 선택 모드 크기의 {:.1}% 추가)",
+        frac_unsel_r,
+        frac_unsel_r * 100.0_f64
+    );
     
     let puzzle_ok = puzzle.verify_puzzle_resolution();
     println!("\n  양성자 반경 퍼즐 설명: {}", if puzzle_ok { "✓ 가능" } else { "✗ 불가능" });

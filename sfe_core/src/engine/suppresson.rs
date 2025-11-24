@@ -451,6 +451,23 @@ pub fn run_suppresson_evidence_analysis() {
             i+1, e.mode.omega_sim, e.mode.amplitude_sim, e.qec_gain, e.improvement_over_baseline);
     }
     
+    if let Some(best) = all_sorted.first() {
+        let g_sel = best.improvement_over_baseline;
+        let g_exp = 1.5_f64;
+        let g_unsel = g_exp - g_sel;
+        let frac_unsel = g_unsel / g_sel;
+        
+        println!("\n   선택/비선택 억압장 관점에서 본 QEC Gain 분해:");
+        println!("     G_sel(sim) = {:.3}x (최고 스윗스팟 시뮬레이션)", g_sel);
+        println!("     G_exp(doc) = {:.3}x (문서 7.5장 목표값)", g_exp);
+        println!("     G_unsel    = {:.3}x", g_unsel);
+        println!(
+            "     G_unsel/G_sel = {:.3} (비선택 모드가 시뮬레이션 Gain의 {:.1}% 조정 필요)",
+            frac_unsel,
+            frac_unsel * 100.0_f64
+        );
+    }
+    
     println!("\n5. 고에너지-저에너지 사영 검증");
     let g_mu = 6e-4;
     let m_phi_mev = 17.0;
