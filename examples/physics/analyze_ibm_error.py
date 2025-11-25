@@ -2,6 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
+from sfe import sfe_error_model, fit_sfe_error_params
 
 def analyze_error_rates():
     # Load sweep results
@@ -44,6 +45,17 @@ def analyze_error_rates():
         print(f"\nDetailed Stats at Noise Amp = {target_noise}:")
         print(subset[['PulseCount', 'Error_UDD', 'Error_SFE', 'Reduction_Rate']].to_string(index=False))
         
+        subset = subset.copy()
+        params = fit_sfe_error_params(subset['PulseCount'].values, subset['Error_SFE'].values)
+        min_pulse = subset['PulseCount'].min()
+        subset['PulseStep'] = subset['PulseCount'] / float(min_pulse)
+        subset['Error_SFE_Model'] = sfe_error_model(params.e0, params.e_min, params.r, subset['PulseStep'].values)
+        model_mae = np.mean(np.abs(subset['Error_SFE'] - subset['Error_SFE_Model']))
+        
+        print(f"\nSFE Error Model (R={params.r:.3f}, Emin={params.e_min:.4f}) at Noise Amp = {target_noise}:")
+        print(subset[['PulseCount', 'Error_SFE', 'Error_SFE_Model']].to_string(index=False))
+        print(f"Mean abs error between model and data: {model_mae:.4f}")
+        
         # Visualization
         plt.figure(figsize=(12, 6))
         
@@ -51,6 +63,7 @@ def analyze_error_rates():
         plt.subplot(1, 2, 1)
         plt.plot(subset['PulseCount'], subset['Error_UDD'], 'o-', label='UDD (Baseline)')
         plt.plot(subset['PulseCount'], subset['Error_SFE'], 's-', label='SFE (Optimized)')
+        plt.plot(subset['PulseCount'], subset['Error_SFE_Model'], '^-', label='SFE Model')
         plt.title(f"Logical Error Rate (Noise={target_noise})")
         plt.xlabel("Pulse Count")
         plt.ylabel("Error Rate (1 - Coherence)")
