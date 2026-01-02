@@ -2,3 +2,7 @@
 /.venv/
 .env
 /data/
+.cursor
+/.cursor
+__pycache__/
+*.pyc
